@@ -44,6 +44,6 @@ function plot_bounds(A, fig_nb)
     set(gcf, 'renderer','OpenGL');
     set(gcf,'color','w');
     saveas(gcf,sprintf('fig%d.fig',fig_nb));
-    print(gcf,sprintf('fig%d.bounds',fig_nb),'-dpng','-r300');
+    print(gcf,sprintf('fig%d',fig_nb),'-dpng','-r300');
     close(gcf);
 end
