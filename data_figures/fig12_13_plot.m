@@ -4,7 +4,7 @@ function fig12_13_plot
 end
 
 function plot_bounds(A, fig_nb)
-    figW = 1100;
+    figW = 1000;
     figH = 330;
     fig1 = figure('Position', [400,400,figW,figH]);
     fig1.Renderer = 'opengl';
@@ -14,24 +14,30 @@ function plot_bounds(A, fig_nb)
         [0.0518819938962359 0.346153846153846 0.911836826965439 0.58152695185114]);
     hold(axes1,'on');
     
+    barwidth = 0.6;
+    if fig_nb ==13
+        barwidth = 0.8;
+    end
+    
     % Create multiple lines using matrix input to bar
     bar1 = bar(A,'BaseValue',100,'EdgeColor','none');
     if fig_nb ==13
         bar1 = bar(A,'BaseValue',0.1,'EdgeColor','none');
     end
-    set(bar1(1),'DisplayName','$\mathcal{M}$+$\triangle$','FaceColor',[0 0.5 0],'BarWidth',0.6);
+    set(bar1(1),'DisplayName','$\mathcal{M}$+$\triangle$','FaceColor',[0 0.5 0],'BarWidth',barwidth);
     set(bar1(2),'DisplayName','Naive $\mathcal{M}$+$\triangle$+$\mathcal{S}_3$',...
         'FaceColor',[0 0 1],...
-        'BarWidth',0.6);
+        'BarWidth',barwidth);
     set(bar1(3),...
         'DisplayName','Heur. $\mathcal{M}$+$\triangle$+$\mathcal{S}_{3-5}$',...
-        'FaceColor',[1 0 0],'BarWidth',0.6);
+        'FaceColor',[1 0 0],'BarWidth',barwidth);
     if fig_nb==12
-        set(bar1(4),'DisplayName','BGL','FaceColor',[0 0 0],'BarWidth',0.6);
+        set(bar1(4),'DisplayName','BGL','FaceColor',[0 0 0],'BarWidth',barwidth);
     end
-
+       
     % Set the remaining axes properties
-    set(axes1,'XTick',[1 2 3 4 5 6 7 8 9 10 11 12],'XTickLabel',...
+    box(axes1,'on');
+    set(axes1,'xlim', [0,13], 'XTick',[1 2 3 4 5 6 7 8 9 10 11 12],'XTickLabel',...
         {'Small Low','Small Medium','Small High','Medium Low','Medium Medium','Medium High','Large Low','Large Medium','Large High','Jumbo Low','Jumbo Medium','Jumbo High'},...
         'XTickLabelRotation',90,'YScale','log');
     h = findobj(gca,'Type','bar');
