@@ -1,0 +1,6 @@
+numpy>=1.16
+scipy>=1.2
+cython
+chompack
+lxml
+cvxopt
