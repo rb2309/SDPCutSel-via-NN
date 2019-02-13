@@ -496,6 +496,3 @@ class CutSolverQCQP(CutSolver):
 
         self._agg_list = list(filter(lambda x: x[2], agg_list))
 
-
-
-#CutSolverQCQP().cut_select_algo("powerflow0009r_ref", 3, sel_size=12, strat=3, nb_rounds_cuts=20)
