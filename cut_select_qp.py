@@ -2,7 +2,7 @@ from timeit import default_timer as timer
 from operator import itemgetter, mul
 from copy import deepcopy
 import itertools
-import os
+import os.path
 import platform
 import ctypes
 import numpy as np
@@ -112,10 +112,11 @@ class CutSolver(object):
         # SDP decomposition in a list of sub-problems with their details (agg_list) and adjacency matrix (Q_adj).
         nb_subprobs = self.__get_sdp_decomposition(dim, ch_ext=ch_ext)
         # Guard when (agg_list) is possibly too large to store in RAM memory
-        if nb_subprobs >= CutSolver._THRES_MAX_SUBS:
+        # Also return just number of subproblems if no cut rounds to go through
+        if nb_subprobs >= CutSolver._THRES_MAX_SUBS or nb_rounds_cuts == 0:
             # for such instances can alternatively trade time penalty for memory by computing elements of (agg_list)
             # at every round one at a time, but will run into CPLEX impractically long solve times
-            return [0, 0], timer() - time_begin, [0, 0], [0], [0], nb_subprobs, 0
+            return [0, 0], timer() - time_begin, 0, 0, [0], 0, nb_subprobs
         agg_list = self._agg_list
 
         # Add McCormick cuts to the instance just created (if chordal extension used in SDP decomp take it in account)
@@ -698,6 +699,7 @@ class CutSolver(object):
         mat = self._Mat
         mat[dim_subpr - 2][0, 1:] = curr_pt
         mat[dim_subpr - 2][self._inds[dim_subpr - 2]] = X_slice
+        # np.linalg.eigh(/eigvalsh) return eigenvalues in ascending order
         return np.linalg.eigh(mat[dim_subpr - 2], "U") if ev_yes \
             else np.linalg.eigvalsh(mat[dim_subpr - 2], "U")
 
@@ -780,7 +782,3 @@ class CutSolver(object):
         my_prob.linear_constraints.add(lin_expr=coeffs_tri, rhs=rhs_tri, senses=senses_tri)
         return nb_tri_cuts
 
-#CutSolver().cut_select_algo("spar040-060-1", 3, 0.05, 2, term_on=True, sol=1322.66667, plots=True, nb_rounds_cuts=20)
-#CutSolver().cut_select_algo("spar030-060-3", 3, 0.1, 1, triangle_on=False, term_on=True, ch_ext=1)
-#CutSolver().cut_select_algo("spar060-020-2", 3, 0.05, 2, term_on=True, sol=1925.5, plots=True, nb_rounds_cuts=20)
-#CutSolver().cut_select_algo("spar060-020-2", 3, 0.05, 2, term_on=True, nb_rounds_cuts=20, plots=True, sol=1925.5)

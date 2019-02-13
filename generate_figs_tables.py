@@ -1,6 +1,6 @@
 import utilities as utils
-from cut_select_qp import CutSolver
-from cut_select_powerflow import CutSolverQCQP
+#from cut_select_qp import CutSolver
+#from cut_select_powerflow import CutSolverQCQP
 import numpy as np
 import os
 
@@ -10,14 +10,14 @@ def main():
     test_cfg = True
 
     # All figures and tables
-    run_everything(folder_tables="data_tables", folder_figures="data_figures", test_cfg=test_cfg)
+    #run_everything(folder_tables="data_tables", folder_figures="data_figures", test_cfg=test_cfg)
 
     # All figures
     # run_all_figures(folder_name="data_figures", test_cfg=test_cfg)
 
     # An individual figure
-    # figure_nb = 4
-    # run_for_figure(figure_nb, folder_name="data_figures", test_cfg=test_cfg)
+    figure_nb = 4
+	run_for_figure(figure_nb, folder_name="data_figures_1", test_cfg=test_cfg)
 
     # All tables
     # run_for_all_tables(table=0, folder_name="data_tables", test_cfg=test_cfg)
@@ -33,62 +33,23 @@ def run_everything(folder_tables="data_tables", folder_figures="data_figures", t
 
 
 def run_all_figures(folder_name="data_figures", test_cfg=True):
-    for figure_nb in [1, 4, 5, 6, 7, 8, 9, 10, 14]:
+    for figure_nb in [1, 4, 6, 7, 8, 9, 10, 14]:
         run_for_figure(figure_nb, folder_name=folder_name, test_cfg=test_cfg)
 
 
-def run_for_all_tables_test(folder_name):
-    text_file = open("boxqp_instances/filenames.txt", "r")
-    problems = text_file.read().split('\n')
-    text_file.close()
-    dict_sel = {2: "opt", 1: "feas"}
-    dict_sel2 = {2: "Optimality selection (neural nets)", 1: "Feasibility selection"}
-    info_inst = []
-    # Get filename, size, density and solution of each BoxQP instance for calculations
-    for prob in problems:
-        filename, sol = prob.split('  ')
-        size_inst = filename.split('-')
-        density_inst = int(size_inst[1])
-        size_inst = int(size_inst[0].split('r')[1])
-        info_inst.append((filename, size_inst, density_inst, float(sol)))
-    dirname = os.path.join(os.path.dirname(__file__), folder_name)
+def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag='w'):
+    """Run on all BoxQP instances (or except the very large ones for test_cfg=True) to construct the tables 4-7 and
+    figures 12-13 in the manuscript
+    :param figure: for which figure to run (1, 4-10, 14)
+    :param folder_name: what folder to save to
+    :param test_cfg: run all figures fully (False) or run scaled down (True) for Figure 1 by limiting instance size
+    and for Figure 9 by ommiting dense instances
+    :param write_flag: overwrite to .csv data file or append
+    :return: saved .csv data files in folder_name
+    """
+    dirname = os.path.join(os.path.curdir, folder_name)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    write_flag = "w"
-    # Create QP cut solver
-    cs = CutSolver()
-
-    ###########################################
-    #  Data for chordal extensions M+bar(S(P_3)), M+bar(S(P_3*)) (Table 6)
-    ###########################################
-    sel_size = 0.1
-    dim = 3
-    # chordal extensions M+bar(S(P3)), M+bar(S(P3*))
-    dict_ch = {1: "barSP3", 2: "barSP3star"}
-    for chordalExt in [1, 2]:
-        # for optimality selection via neural nets (2) and feasibility selection (1)
-        selections = [1, 2] if chordalExt == 1 else [1]
-        for selectType in selections:
-            save_file = os.path.join(dirname, "data_M_" + dict_ch[chordalExt] + "_" + dict_sel[selectType] + "_" + str(
-                sel_size) + ".csv")
-            with open(save_file, write_flag) as f:
-                f.write(dict_sel2[selectType] + " for M+" + dict_ch[chordalExt]
-                        + " with selection size " + str(sel_size) + "\n")
-                f.write("filename,size,density,percent_gap_closed,nb_subproblems,nb_sdp_cuts\n")
-            for inst in range(len(problems)):
-                filename, size_inst, dens_inst, sol = info_inst[inst]
-                (curObjValues, time_overall, _, _, nb_sdp_cuts, _, nb_subproblems) = \
-                    cs.cut_select_algo(filename, dim, sel_size, strat=selectType, triangle_on=False, term_on=True,
-                                       ch_ext=chordalExt)
-                percent_gap_closed = (curObjValues[-1] - curObjValues[0]) / (sol - curObjValues[0])
-                with open(save_file, "a") as f:
-                    f.write(filename + "," + str(size_inst) + "," + str(dens_inst) + "," + str(percent_gap_closed) + ","
-                            + str(nb_subproblems) + "," + str(sum(nb_sdp_cuts)) + "\n")
-                print("- M+" + dict_ch[chordalExt] + ", " + str(sel_size) + " ," + dict_sel[selectType] +
-                      ": " + filename + ", time:" + str(time_overall))
-
-
-def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag='w'):
     print("Run for Figure " + str(figure) + " ... ")
     # Create instances of cutting plane solvers (QP and QCQP)
     cs = CutSolver()
@@ -97,22 +58,18 @@ def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag
     # Random seed used in all figures
     seed_nb = 7
     ###########################################
-    # Figure 1 plot analysing M+S_3 bounds on random instances of different size
+    # Figure 1 analysing M+S_3 bounds on random instances of different size
     ###########################################
     # takes a very long time (~10h) to run to size of instances 65, consider stop at 30 for testing
     if figure == 1:
         save_file = os.path.join(dirname, "fig1_bounds_3D.csv")
         reset_file(save_file, write_flag)
-        np.random.seed(seed_nb)
-        # Reset the file if write_flag set to write
-        with open(save_file, "w"):
-            pass
         if test_cfg:
-            utils.get_average_bounds_3d(save_file, start=5, stop=30, step=5, nb_instances=30)
+            utils.get_average_bounds_3d(save_file, start=5, stop=30, step=5, nb_instances=30, rand_seed=seed_nb)
         else:
-            utils.get_average_bounds_3d(save_file, start=5, stop=65, step=5, nb_instances=30)
+            utils.get_average_bounds_3d(save_file, start=5, stop=65, step=5, nb_instances=30, rand_seed=seed_nb)
     ###########################################
-    # Figure 4 plot looking at the SDP relaxation surface for a 2D example
+    # Figure 4 looking at the SDP relaxation surface for a 2D example
     ###########################################
     # very quick to run (~10s)
     elif figure == 4:
@@ -120,34 +77,33 @@ def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag
         reset_file(save_file, write_flag)
         utils.gen_sdp_surface_2d_fig4(save_file)
     ###########################################
-    # Figure 5 plot looking at distribution of data sampled for neural nets
+    # Figure 5 looking at distribution of data sampled for neural nets
     ###########################################
-    # Can also be run to generate training/test sets for neural nets
-    # Slow for >10k samples (which is fine for fig.5 unless you plan to use for neural nets)
+    # Can also be run to generate training/test sets for neural nets, so using Figure 7 data
+    # ok to run (10-20 mins) for 10k samples each
+    # Will match the existing file "GenDataTest3D.csv" with 500k entries in "neural_nets" (same seed)
     elif figure == 5:
-        save_file = os.path.join(dirname, "neural_nets", "GenDataTest3D_fig5.csv")
+        save_file = os.path.join(os.path.curdir, "neural_nets", "GenDataTest3D_fig7.csv")
         reset_file(save_file, write_flag)
-        np.random.seed(seed_nb)
-        utils.gen_data_ndim(10000, 3, save_file)
+        utils.gen_data_ndim(10000, 3, save_file, rand_seed=seed_nb)
     ###########################################
-    # Figure 6 plot for uniform Q's distribution of eigenvalues
+    # Figure 6 for uniform Q's distribution of eigenvalues
     ###########################################
     # ok to run (~30s)
     elif figure == 6:
         save_file = os.path.join(dirname, "fig6_data_randomQs.csv")
-        np.random.seed(seed_nb)
-        utils.gen_data_3d_q(50000, save_file)
+        reset_file(save_file, write_flag)
+        utils.gen_data_3d_q(500000, save_file, rand_seed=seed_nb)
     ###########################################
-    # Figure 7 plot for uniform Q's distribution of eigenvalues
+    # Figure 7 plot for other neural net test data
     ###########################################
-    # ok to run (10-20 mins) for 10k samples each;
+    # ok to run (10-20 mins) for 10k samples each
+    # Will match the existing files with 500k entries in "neural_nets" (same seed)
     elif figure == 7:
-        for nn_size in [2, 3, 4, 5]:
-            save_file = os.path.join(dirname, "neural_nets", "GenDataTest" + str(nn_size) + "D_fig7.csv")
+        for nn_size in [4]:
+            save_file = os.path.join(os.path.curdir, "neural_nets", "GenDataTest" + str(nn_size) + "D_fig7.csv")
             reset_file(save_file, write_flag)
-            np.random.seed(seed_nb)
-            # overwrite with random entries to save_file (change write_flag='a') to append
-            utils.gen_data_ndim(10000, nn_size, save_file, write_flag='w')
+            utils.gen_data_ndim(10000, nn_size, save_file, rand_seed=seed_nb)
     ###########################################
     # Figure 8 plot comparing optimality selection via estimated vs. exact measures
     ###########################################
@@ -255,7 +211,7 @@ def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag
         # run random selection
         print("- " + filename + " random sel ... ")
         np.random.seed(seed_nb)
-        for i in range(0, 10):
+        for i in range(10):
             sols.append(cs.cut_select_algo(filename, dim, top, strat=5, plots=True, sol=sols_ms))
         # run optimality selection with exact SDP solutions (Mosek)
         print("- " + filename + " optimality exact sel ... ")
@@ -292,7 +248,7 @@ def run_for_figure(figure, folder_name="data_figures", test_cfg=True, write_flag
     ###########################################
     # reasonable run-time (~15mins)
     elif figure == 14:
-        save_file = os.path.join(dirname, "fig14_data.csv")
+        save_file = os.path.join(dirname, "fig14_data")
         filename = "powerflow0009r_preprocessed"
         strats_names = ["feasibility", "combined selection 2, one constraint at a time",
                         "combined selection 1, all constraints aggregated", "random"]
@@ -453,9 +409,12 @@ def run_for_all_tables(table=0, folder_name="data_tables", test_cfg=True):
                     f.write("filename,size,density,percent_gap_closed,nb_subproblems,nb_sdp_cuts\n")
                 for inst in range(len(problems)):
                     filename, size_inst, dens_inst, sol = info_inst[inst]
+                    # Number of cut rounds for table 5 (40) unless jumbo high density category for M+S5 where
+                    # there are instances we run out of memory for, so don't do cuts rounds for that category)
+                    cut_rounds = 0 if (dim == 5 and size_inst >= 100 and dens_inst >= 75) else table5_rounds
                     (curObjValues, time_overall, _, _, nb_sdp_cuts, _, nb_subproblems) = \
                         cs.cut_select_algo(filename, dim, sel_size, strat=selectType, triangle_on=False,
-                                           term_on=True, nb_rounds_cuts=table5_rounds)
+                                           term_on=True, nb_rounds_cuts=cut_rounds)
                     percent_gap_closed = (curObjValues[-1] - curObjValues[0]) / (sol - curObjValues[0])
                     with open(save_file, "a") as f:
                         f.write(filename + "," + str(size_inst) + "," + str(dens_inst) + "," + str(percent_gap_closed) + ","

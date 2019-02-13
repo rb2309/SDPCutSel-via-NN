@@ -1,11 +1,10 @@
 from cut_select_qp import CutSolver
 import itertools
-import random
 from operator import itemgetter, mul
 import numpy as np
 import cvxpy as cvx
-import lxml.etree as ET
-import os
+import lxml.etree as parser
+import os.path
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -84,7 +83,7 @@ class CutSolverQCQP(CutSolver):
                     obj_improve = -eigvals[0]
                 # Random selection
                 elif rand_sel:
-                    obj_improve = random.random()
+                    obj_improve = np.random.random_sample()
                 # A variant of combined selection
                 elif eigvals[0] < CutSolver._THRES_NEG_EIGVAL:
                     # Flag indicating whether a cut can be selected by the optimality measure
@@ -150,7 +149,6 @@ class CutSolverQCQP(CutSolver):
             value = prob.solve(verbose=False, solver=cvx.ECOS)
             obj_values_rounds[cut_round] = value
             nb_cuts_opt[cut_round - 1] = nb_cuts_sel_by_opt
-            #print(value)
         return obj_values_rounds, nb_cuts_opt
 
     def __parse_powerflow_osil_into_cvx(self, filename):
@@ -159,10 +157,10 @@ class CutSolverQCQP(CutSolver):
         """
         dirname = os.path.join(os.path.dirname(__file__), "boxqp_instances", filename + ".osil")
         # Parse xml in a tree structure
-        it = ET.iterparse(dirname)
-        for _, el in it:
+        expr_tree = parser.iterparse(dirname)
+        for _, el in expr_tree:
             el.tag = el.tag.split('}', 1)[1]  # strip all namespaces
-        tree = it.root
+        tree = expr_tree.root
         # Get variables xml element
         vars_xml = tree.find('instanceData/variables')
         # Number of linear variables
@@ -495,4 +493,5 @@ class CutSolverQCQP(CutSolver):
         ######################
 
         self._agg_list = list(filter(lambda x: x[2], agg_list))
+
 
