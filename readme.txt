@@ -9,7 +9,7 @@ A. Dependencies
 
 - OS: Linux/Windows x86-64
 - Python 3.5 having the (non-standard packages):
-	- CPLEX >12.8 (Python API via IBM ILOG Optimization Suite)
+	- CPLEX >=12.8 (Python API via IBM ILOG Optimization Suite)
 	- MOSEK for Python (e.g. 'conda install -c mosek mosek')
 	- ctypes, chompack, lxml, cvxopt, cvxpy=0.4.11 (version >=1.0 breaks current code),
 	- (optional) Matlab + Coder + Neural/Deep Networks Toolbox for (re-)training neural nets used	
