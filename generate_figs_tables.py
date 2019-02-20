@@ -1,6 +1,6 @@
 import utilities as utils
-#from cut_select_qp import CutSolver
-#from cut_select_powerflow import CutSolverQCQP
+from cut_select_qp import CutSolver
+from cut_select_powerflow import CutSolverQCQP
 import numpy as np
 import os
 
@@ -10,14 +10,14 @@ def main():
     test_cfg = True
 
     # All figures and tables
-    #run_everything(folder_tables="data_tables", folder_figures="data_figures", test_cfg=test_cfg)
+    run_everything(folder_tables="data_tables", folder_figures="data_figures", test_cfg=test_cfg)
 
     # All figures
     # run_all_figures(folder_name="data_figures", test_cfg=test_cfg)
 
     # An individual figure
-    figure_nb = 4
-	run_for_figure(figure_nb, folder_name="data_figures_1", test_cfg=test_cfg)
+    # figure_nb = 4
+    # run_for_figure(figure_nb, folder_name="data_figures_1", test_cfg=test_cfg)
 
     # All tables
     # run_for_all_tables(table=0, folder_name="data_tables", test_cfg=test_cfg)
