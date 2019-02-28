@@ -1,0 +1,4 @@
+data_figures/* linguist-vendored=true
+data_tables/* linguist-vendored=true
+boxqp_instances/* linguist-vendored=true
+neural_nets/* linguist-vendored=true
