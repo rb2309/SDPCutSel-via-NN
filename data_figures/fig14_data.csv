@@ -1,0 +1,13 @@
+size,density,BGL_time(s),M+tri_time(s),M+tri+S^E_3_time(s),M+tri+S^E_3-5_time(s)
+Small,Low,0.24,0.24,0.26
+,Medium,0.39,0.54,0.77
+,High,0.31,0.56,1.49
+Medium,Low,0.89,0.9,0.9
+,Medium,2.71,3.75,5.81
+,High,4.67,18.39,32.0
+Large,Low,5.49,6.77,6.97
+,Medium,11.92,10.27,23.49
+,High,12.95,42.58,100.67
+Jumbo,Low,30.23,40.25,42.1
+,Medium,44.8,68.48,146.75
+,High,52.7,148.47,154.57

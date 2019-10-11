@@ -4,7 +4,12 @@ from copy import deepcopy
 import numpy as np
 from scipy.stats import ortho_group
 import cvxpy as cvx
-
+import mosek
+from mosek.fusion import *
+import os.path
+import platform
+import ctypes
+from operator import itemgetter, mul
 
 def gen_data_ndim(nb_datapoints, dim, savefile, rand_seed=7):
     """Sampling according to Table 1 in manuscript:
@@ -54,6 +59,120 @@ def gen_data_ndim(nb_datapoints, dim, savefile, rand_seed=7):
                 t0 = t1
 
 
+def compare_nn_solver(nb_datapoints, dims, save_file, rand_seed=7):
+    """Comparison of all times for solving a rho subproblem as presented in Table 2 of the manuscript 
+    (except Sedumi which is in Matlab)
+    :param nb_datapoints: on how many subproblems to compare timings
+    :param dims: dimensionalities of SDP sub-problems to sample
+    :param savefile: file to save timings in
+    :param rand_seed: random seed, pre-set to 7
+    :return: None
+    """
+    np.random.seed(rand_seed)
+
+    if platform.uname()[0] == "Windows":
+        nn_library = os.path.join('neural_nets', 'NNs.dll')
+    elif platform.uname()[0] == "Linux":
+        nn_library = os.path.join('neural_nets', 'NNs.so')
+    else:  # Mac OSX
+        raise ValueError('The neural net library is compiled only for Windows/Linux! (OSX needs compiling)')
+        #   nn_library = 'neural_nets/NNs.dylib' - Not compiled for OSX, will throw error
+    nn_library = ctypes.cdll.LoadLibrary(nn_library)
+    with open(save_file, 'w') as f:
+        f.write("n,NN_time,eigendecomp_time,mosek_tol=1e-2_time,mosek_tol=1e-1_time\n")
+
+    for dim in dims:
+        print("Comparison of avg subproblem solve time for n=" + str(dim) + " ...")
+        func_dim = getattr(nn_library, "neural_net_%dD" % dim)  # load each neural net
+        func_dim.restype = ctypes.c_double  # return type from each neural net is a c_double
+        # c_double array input: x_rho (the current point) and Q_rho (upper triangular part since symmetric)
+        input_arr = (ctypes.c_double * (dim * (dim + 3) // 2))()
+        sdp_times = [np.zeros((nb_datapoints, 1)),np.zeros((nb_datapoints, 1))]
+        nn_times = np.zeros((nb_datapoints, 1))
+        decomp_times = np.zeros((nb_datapoints, 1))
+        inds = np.triu_indices(dim)
+
+        Mat = np.zeros((dim+1, dim+1))
+        Mat[0, 0] = 1
+        decomp_inds = (np.array([1 + x for x in np.triu_indices(dim, 0, dim)[0]]),
+                       np.array([1 + x for x in np.triu_indices(dim, 0, dim)[1]]))
+
+        for data_pt_nb in range(1, nb_datapoints + 1):
+            # ortho-normal basis/matrix (eigvecs) of eigenvectors
+            eigvecs = ortho_group.rvs(dim)
+            # uniform eigenvalues in [-1,1]
+            eigvals = np.random.uniform(-1, 1, dim).tolist()
+            # construct sampled Q from eigen-decomposition
+            Q = np.matmul(np.matmul(eigvecs, np.diag(eigvals)), np.transpose(eigvecs))
+            # uniform point positioning (x) in [0,1] for each dimension
+            x = np.random.uniform(0, 1, dim).tolist()
+
+            # Evaluate with Mosek IPM solver with tolerances 1e-2
+            with Model() as M:
+                const_tol = 1.0e-2
+                M.setSolverParam("intpntCoTolRelGap", const_tol)
+                M.setSolverParam("intpntCoTolInfeas", const_tol)
+                M.setSolverParam("intpntCoTolDfeas", const_tol)
+                M.setSolverParam("intpntCoTolPfeas", const_tol)
+                M.setSolverParam("numThreads", 1)
+                Z = M.variable("Z", dim + 1, Domain.inPSDCone())
+                X = Z.slice([0, 0], [dim, dim])
+                M.constraint(Z.index(dim, dim), Domain.equalsTo(1.))
+                M.constraint(X.diag(), Domain.lessThan(x))
+                M.constraint(Z.slice([0, dim], [dim, dim + 1]), Domain.equalsTo(x))
+                M.objective(ObjectiveSense.Minimize, Expr.sum(Expr.mulElm(Q, X)))
+                M.solve()
+                # Record only optimizer time
+                sdp_times[0][data_pt_nb - 1] = M.getSolverDoubleInfo("optimizerTime")
+
+            # Evaluate with Mosek IPM solver with tolerances 1e-1
+            with Model() as M:
+                const_tol = 1.0e-1
+                M.setSolverParam("intpntCoTolRelGap", const_tol)
+                M.setSolverParam("intpntCoTolInfeas", const_tol)
+                M.setSolverParam("intpntCoTolDfeas", const_tol)
+                M.setSolverParam("intpntCoTolPfeas", const_tol)
+                M.setSolverParam("numThreads", 1)
+                Z = M.variable("Z", dim + 1, Domain.inPSDCone())
+                X = Z.slice([0, 0], [dim, dim])
+                M.constraint(Z.index(dim, dim), Domain.equalsTo(1.))
+                M.constraint(X.diag(), Domain.lessThan(x))
+                M.constraint(Z.slice([0, dim], [dim, dim + 1]), Domain.equalsTo(x))
+                M.objective(ObjectiveSense.Minimize, Expr.sum(Expr.mulElm(Q, X)))
+                M.solve()
+                # Record only optimizer time
+                sdp_times[1][data_pt_nb - 1] = M.getSolverDoubleInfo("optimizerTime")
+
+            Q = np.triu(Q, 1) + np.triu(Q, 0)
+            Q_slice = list(Q[inds])
+
+            input_arr[:dim] = x
+            input_arr[dim:] = Q_slice
+
+            Mat[0, 1:] = x
+            Mat[decomp_inds] = Q_slice
+
+            # Evaluate using trained neural net
+            time0 = timer()
+            func_dim(input_arr)
+            nn_times[data_pt_nb - 1] = timer()-time0
+
+            # Evaluate using numpy/LAPACK _syevd
+            # np.linalg.eigh(/eigvalsh) return eigenvalues in ascending order
+            time0 = timer()
+            np.linalg.eigvalsh(Mat, "U")
+            decomp_times[data_pt_nb - 1] = timer() - time0
+
+            average_times = [
+                sum(nn_times)[0] / nb_datapoints * 1000,
+                sum(decomp_times)[0] / nb_datapoints * 1000,
+                sum(sdp_times[0])[0] / nb_datapoints * 1000,
+                sum(sdp_times[1])[0] / nb_datapoints * 1000
+            ]
+        with open(save_file, "a") as f:
+            f.write(str(dim) + "," + ",".join(str(time) for time in average_times) + "\n")
+
+
 def gen_data_3d_q(nb_datapoints, savefile, rand_seed=7):
     """Sampling uniformly directly on the matrix Q itself (uniform Q entries in [-1,1]) for 3-dim sub-problems.
     :param nb_datapoints: how many data points to sample
@@ -87,8 +206,8 @@ def gen_data_3d_q(nb_datapoints, savefile, rand_seed=7):
                 t0 = t1
 
 
-def get_average_bounds_3d(savefile, start=5, stop=65, step=5, nb_instances=30, rand_seed=7):
-    """ Get average percentage bounds for sampled problem sizes (Fig.1 in manuscript) - by default between 5-65
+def get_average_bounds_3d(savefile, start=5, stop=60, step=5, nb_instances=30, rand_seed=7):
+    """ Get average percentage bounds for sampled problem sizes (Fig.1 in manuscript) - by default between 5-60
     for 30 instances at every size that's a multiple of 5
     :param savefile: .csv file to save results to
     :param start: Lower bound on problem size
@@ -98,8 +217,8 @@ def get_average_bounds_3d(savefile, start=5, stop=65, step=5, nb_instances=30, r
     :param rand_seed: random seed, pre-set to 7
     :return: None
     """
-    np.random.seed(rand_seed)
-    for nbVb in range(start, stop, step):
+    for nbVb in range(start, stop + step, step):
+        np.random.seed(rand_seed)
         solve_random_inst_3d(nbVb, nb_instances, savefile)
 
 
@@ -162,7 +281,7 @@ def solve_random_inst_3d(nb_vars, nb_instances, savefile):
             f.write((str(nb_vars) + "," + str(sample_nb) + ",") + ",".join(str(x) for x in solution) + "\n")
 
 
-def gen_sdp_surface_2d_fig4(savefile, iters=11):
+def gen_sdp_surface_2d_fig3(savefile, iters=11):
     """Calls gen_sdp_surface_2d for settings used in Fig. 4 in the manuscript
     """
     Q = np.asmatrix(np.array([[-1, 10], [0, -1]]))

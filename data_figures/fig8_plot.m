@@ -12,7 +12,7 @@ function fig8_plot
        Ms1not = Ms1(Ms1(:,2)==0,[1,5]);
        createaxes1(Ms1not(:,1),Ms1not(:,2),Ms1sel(:,1),Ms1sel(:,2),nbTriples,r);
 
-       % show only top 400 sub-problems for sorted columns 2-3
+       % show only top 400 subproblems for sorted columns 2-3
        showCount = 400;
 
        Ms2 = sortrows(Ms,5,'descend');
@@ -38,7 +38,7 @@ function fig8_plot
     close(gcf);
 end
 
-% Plot first column (all rho sub-problems unordered)
+% Plot first column (all rho subproblems unordered)
 function createaxes1(X1, Y1, X2, Y2,nbTriples,r)
     axes1 = axes('Position',[0.1 0.8-r*0.23 0.25 0.16]);
     hold(axes1,'on');
@@ -46,18 +46,19 @@ function createaxes1(X1, Y1, X2, Y2,nbTriples,r)
     stem(X1,Y1,'MarkerSize',0.001,'Color',[0.3843 0.6157 0.9882]);
     stem(X2,Y2,'MarkerSize',5,'Color',[0 0 0]);
     xlim(axes1,[0 nbTriples]);
-    ylim(axes1,[-15 40]);    
+    ylim(axes1,[-15 40]);
+    %ylim(axes1,[-0.05 0.15]);
     grid(axes1,'on');
     % cuts round r
     if r==3
         text('Parent',axes1,'FontSize',18,'Rotation',90,'Interpreter','latex',...
             'String','$\mathcal{I}_X(\rho)$',...
             'Position',[-247.542857142857 120.430555555556 0]);
-        xlabel({'All $\rho$ sub-problems';'unordered'},'Interpreter','latex','FontSize',15) ;
+        xlabel({'All $\rho$ subproblems';'unordered'},'Interpreter','latex','FontSize',15) ;
     end
 end
 
-% Plot second column (top sub-problems ordered by exact obj. improvement)
+% Plot second column (top subproblems ordered by exact obj. improvement)
 function createaxes2(X1, Y1, X2, Y2,nbTriples,r)
     axes1 = axes('Position',[0.40 0.8-r*0.23 0.25 0.16]);
     hold(axes1,'on');
@@ -72,18 +73,18 @@ function createaxes2(X1, Y1, X2, Y2,nbTriples,r)
         ylim(axes1,[min(min(Y1),min(Y2)), max(max(Y1),max(Y2))]);
     end
     hold(axes1,'off');
-    th = title({['Round ' num2str(r) ' of $\mathcal{S}_3$ cuts']},'FontSize',15, 'Interpreter','latex');
+    th = title({['Round ' num2str(r+1) ' of $\mathcal{S}_3$ cuts']},'FontSize',15, 'Interpreter','latex');
     titlePos = get( th , 'position');
     titlePos(2) = titlePos(2)*(1.03+(0.06)*r);
     set( th , 'position' , titlePos);
     hold(axes1,'on');
     grid(axes1,'on');
     if r==3
-       xlabel({'Top 400 $\rho$ sub-problems';'ordered by $\mathcal{I}_X(\rho)$'},'Interpreter','latex','FontSize',14); 
+       xlabel({'Top 400 $\rho$ subproblems';'ordered by $\mathcal{I}_X(\rho)$'},'Interpreter','latex','FontSize',14); 
     end
 end
 
-% Plot third column (top sub-problems ordered by estimated obj. improvement)
+% Plot third column (top subproblems ordered by estimated obj. improvement)
 function createaxes3(X1, Y1, X2, Y2,nbTriples,r)
     axes1 = axes('Position',[0.70 0.8-r*0.23 0.25 0.16]);
     hold(axes1,'on');
@@ -99,6 +100,6 @@ function createaxes3(X1, Y1, X2, Y2,nbTriples,r)
     end
     grid(axes1,'on');
     if r==3
-       xlabel({'Top 400 $\rho$ sub-problems';'ordered by $\hat{\mathcal{I}}_X(\rho)$'},'Interpreter','latex','FontSize',14); 
+       xlabel({'Top 400 $\rho$ subproblems';'ordered by $\hat{\mathcal{I}}_X(\rho)$'},'Interpreter','latex','FontSize',14); 
     end
 end

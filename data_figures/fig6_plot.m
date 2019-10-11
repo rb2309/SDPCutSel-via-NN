@@ -1,29 +1,35 @@
-function fig6_plot()
-    dim=3;
-    file = 'fig6_data_randomQs.csv';
-    nbSamples = min(500000,count_lines(file))-1;  
-    eigenvalues = csvread(file,0,0,[0,0,nbSamples,dim-1]);
-    eigenvalues = reshape(eigenvalues.',1,[]);
-    % Create figure
-    figW = 300;
-    figH = 200;
-    fig1 = figure('Position', [400,400,figW,figH]);
+fig1 = figure('Position', [400,400,300,150]);
+fig1.Renderer = 'opengl';
+x = -4:0.01:4; 
+y = tanh(x);
+ygrad = 1-tanh(x).^2;
+hold on;
+plot(x,y,'LineWidth',2,'DisplayName','$\tanh(x)$');
+plot(x,ygrad,'LineWidth',2,'DisplayName','$d\tanh/dx$',...
+    'Color',[0 0 0],'LineStyle',':');
+grid on;
+legend1 = legend(gca,'show');
+set(legend1,'Location','best','Interpreter', 'latex');
+set(fig1, 'renderer','OpenGL');
+set(fig1,'color','w');
+saveas(fig1,'fig_tanh.fig');
+print(fig1,'fig_tanh','-dpng','-r300');
+close(fig1);
 
-    %%%%% Plot on-diagonal Q values histogram for data points
-    % Create axes
-    axes1 = axes('Position',...
-        [0.15 0.15 0.8 0.75]);
-    hold(axes1,'on');
-    % Create histogram
-    histogram(eigenvalues,'NumBins',100);
-    box(axes1,'on');
-    
-    % Save generated figure
-    set(gcf,'color','w');
-    set(gcf, 'renderer','OpenGL');
-    save_name = 'fig6_distrib_ev.fig';
-    saveas(gcf,save_name);
-    print(gcf,'fig6_distrib_ev','-dpng','-r300');
-    close(gcf);
-end
-
+fig2 = figure('Position', [400,400,300,150]);
+fig2.Renderer = 'opengl';
+x = -1:0.01:1; 
+y = poslin(x);
+ygrad = dposlin(x);
+hold on;
+plot(x,y,'LineWidth',2,'DisplayName','ReLU$(x)$');
+plot(x,ygrad,'LineWidth',2,'DisplayName','$d$ReLU$/dx$',...
+    'Color',[0 0 0],'LineStyle',':');
+grid on;
+legend2 = legend(gca,'show');
+set(legend2,'Location','best','Interpreter', 'latex');
+set(fig2, 'renderer','OpenGL');
+set(fig2,'color','w');
+saveas(fig2,'fig_relu.fig');
+print(fig2,'fig_relu','-dpng','-r300');
+close(fig2);
